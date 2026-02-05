@@ -3,7 +3,9 @@ package daemon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -19,28 +21,30 @@ import (
 )
 
 type Daemon struct {
-	cfg              *config.Config
-	state            *state.State
-	listener         net.Listener
+	cfg               *config.Config
+	state             *state.State
+	listener          net.Listener
 	screenshotHandler *commands.ScreenshotHandler
 	recordingHandler  *commands.RecordingHandler
 	obsHandler        *commands.OBSHandler
-	ctx              context.Context
-	cancel           context.CancelFunc
+	ctx               context.Context
+	cancel            context.CancelFunc
+	debug             bool
 }
 
-func New(cfg *config.Config) *Daemon {
+func New(cfg *config.Config, debug bool) *Daemon {
 	st := state.NewState()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Daemon{
-		cfg:              cfg,
-		state:            st,
+		cfg:               cfg,
+		state:             st,
 		screenshotHandler: commands.NewScreenshotHandler(cfg),
 		recordingHandler:  commands.NewRecordingHandler(cfg, st),
 		obsHandler:        commands.NewOBSHandler(cfg, st),
-		ctx:              ctx,
-		cancel:           cancel,
+		ctx:               ctx,
+		cancel:            cancel,
+		debug:             debug,
 	}
 }
 
@@ -110,6 +114,9 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 
 	var req protocol.Request
 	if err := decoder.Decode(&req); err != nil {
+		if errors.Is(err, io.EOF) {
+			return
+		}
 		log.Printf("Error decoding request: %v", err)
 		encoder.Encode(protocol.Response{
 			Success: false,
@@ -118,7 +125,9 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 		return
 	}
 
-	log.Printf("Received command: %s, action: %s", req.Command, req.Action)
+	if req.Action != "waybar-status" || d.debug {
+		log.Printf("Received command: %s, action: %s", req.Command, req.Action)
+	}
 
 	resp := d.executeCommand(req)
 	if err := encoder.Encode(resp); err != nil {
@@ -179,6 +188,15 @@ func (d *Daemon) executeCommand(req protocol.Request) protocol.Response {
 
 	case "pause-recording":
 		err = d.recordingHandler.PauseRecording(ctx)
+
+	case "toggle-record":
+		startAction := "movie-selection" // default
+		if req.Options != nil {
+			if sa, ok := req.Options["start_action"].(string); ok && sa != "" {
+				startAction = sa
+			}
+		}
+		err = d.recordingHandler.ToggleRecord(ctx, startAction, delay, useCurrentScreen)
 
 	// OBS commands
 	case "obs-toggle-recording":

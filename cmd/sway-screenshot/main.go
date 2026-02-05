@@ -39,6 +39,7 @@ func main() {
 			movieCurrentWindowCommand(),
 			stopRecordingCommand(),
 			pauseRecordingCommand(),
+			toggleRecordCommand(),
 		},
 	}
 
@@ -53,12 +54,18 @@ func daemonCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "daemon",
 		Usage: "Run in daemon mode (auto-started if needed)",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "debug",
+				Usage: "Enable debug logging",
+			},
+		},
 		Action: func(ctx context.Context, c *cli.Command) error {
 			cfg, err := config.Load()
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			d := daemon.New(cfg)
+			d := daemon.New(cfg, c.Bool("debug"))
 			return d.Start()
 		},
 	}
@@ -136,6 +143,54 @@ func stopRecordingCommand() *cli.Command {
 
 func pauseRecordingCommand() *cli.Command {
 	return createSimpleCommand("pause-recording", "Pause/resume current recording")
+}
+
+func toggleRecordCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "toggle-record",
+		Usage: "Toggle recording (start if not recording, stop if recording)",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "start-action",
+				Aliases: []string{"a"},
+				Usage:   "Action when starting: movie-selection, movie-screen, movie-current-window",
+				Value:   "movie-selection",
+			},
+			&cli.IntFlag{
+				Name:    "delay",
+				Aliases: []string{"t"},
+				Usage:   "Delay before starting recording in seconds",
+				Value:   0,
+			},
+			&cli.BoolFlag{
+				Name:    "current-screen",
+				Aliases: []string{"c"},
+				Usage:   "Use current focused screen (for movie-screen action)",
+			},
+		},
+		Action: func(ctx context.Context, c *cli.Command) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("failed to load config: %w", err)
+			}
+
+			if err := ensureDaemonRunning(cfg); err != nil {
+				return err
+			}
+
+			req := protocol.Request{
+				Command: "execute",
+				Action:  "toggle-record",
+				Options: map[string]interface{}{
+					"start_action":       c.String("start-action"),
+					"delay":              c.Int("delay"),
+					"use_current_screen": c.Bool("current-screen"),
+				},
+			}
+
+			return sendAndHandleRequest(cfg.SocketPath, req)
+		},
+	}
 }
 
 // Helper functions for command creation
@@ -389,4 +444,3 @@ func statusEqual(a, b *protocol.WaybarStatus) bool {
 		a.Class == b.Class &&
 		a.Alt == b.Alt
 }
-

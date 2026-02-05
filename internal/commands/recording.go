@@ -178,3 +178,29 @@ func (h *RecordingHandler) PauseRecording(ctx context.Context) error {
 
 	return nil
 }
+
+// ToggleRecord toggles recording state: starts if not recording, stops if recording
+func (h *RecordingHandler) ToggleRecord(ctx context.Context, startAction string, delay int, useCurrentScreen bool) error {
+	// Check current state
+	currentState := h.state.GetState()
+
+	if currentState.Recording {
+		// Currently recording, stop it
+		return h.StopRecording(ctx)
+	}
+
+	// Not recording, validate and start with specified action
+	switch startAction {
+	case "movie-selection":
+		return h.MovieSelection(ctx, delay)
+
+	case "movie-screen":
+		return h.MovieScreen(ctx, delay, useCurrentScreen)
+
+	case "movie-current-window":
+		return h.MovieCurrentWindow(ctx, delay)
+
+	default:
+		return fmt.Errorf("invalid start action: %s (valid: movie-selection, movie-screen, movie-current-window)", startAction)
+	}
+}
