@@ -1,0 +1,8 @@
+# Python-generated files
+cover.out
+coverage.out
+bin/*
+.claude/settings.local.json
+tmp/
+/lazyworktree
+/tmp

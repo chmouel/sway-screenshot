@@ -1,0 +1,81 @@
+builds:
+  - env:
+      - CGO_ENABLED=0
+    main: ./
+    binary: sway-screenshot
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -w
+      - -s
+archives:
+  - name_template: >-
+      {{ .Binary }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "linux" }}Linux
+      {{- else }}{{ .Arch }}{{ end }}
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+release:
+  prerelease: "false"
+
+nfpms:
+  - file_name_template: >-
+      sway-screenshot-
+      {{- .Version}}_{{.Os}}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else if eq .Arch "darwin" }}MacOS
+      {{- else if eq .Arch "linux" }}Linux
+      {{- else if eq .Arch "windows" }}Windows
+      {{- else }}{{ .Arch }}{{ end }}
+    homepage: https://github.com/chmouel/sway-screenshot
+    description: "sway-screenshot - A webhook and https://smee.io forwarder"
+    maintainer: Chmouel Boudjnah <chmouel@chmouel.com>
+    license: Apache 2.0
+    formats:
+      - apk
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: ./misc/sway-screenshot-server.service
+        dst: /etc/systemd/system/sway-screenshot-server.service
+        type: "config|noreplace"
+      - src: ./misc/sway-screenshot.service
+        dst: /etc/systemd/system/sway-screenshot-client.service
+        type: "config|noreplace"
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^Brew formula update"
+      - Merge pull request
+      - Merge branch
+      - go mod tidy
+      - Update README.md
+
+aurs:
+  - name: sway-screenshot-bin
+    homepage: "https://github.com/chmouel/sway-screenshot"
+    description: "sway-screenshot - Sway Screenshot control"
+    maintainers:
+      - "Chmouel Boudjnah <chmouel@chmouel.com>"
+    license: Apache 2.0
+    private_key: "{{ .Env.AUR_PRIVATE_KEY }}"
+    git_url: ssh://aur@aur.archlinux.org/sway-screenshot-bin.git
+    package: |-
+      install -Dm755 "./sway-screenshot" "${pkgdir}/usr/bin/sway-screenshot"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/sway-screenshot/LICENSE"
