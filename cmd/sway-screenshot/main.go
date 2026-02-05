@@ -9,15 +9,14 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"syscall"
-	"time"
-
-	"github.com/urfave/cli/v3"
-
 	"sway-screenshot/internal/config"
 	"sway-screenshot/internal/daemon"
 	"sway-screenshot/internal/state"
 	"sway-screenshot/pkg/protocol"
+	"syscall"
+	"time"
+
+	"github.com/urfave/cli/v3"
 )
 
 func main() {
@@ -86,7 +85,7 @@ func waybarStatusCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:  "icon-idle",
 				Usage: "Icon for idle/ready state",
-				Value: "󰕧",
+				Value: "",
 			},
 			&cli.StringFlag{
 				Name:  "icon-recording",
@@ -377,11 +376,11 @@ func sendRequest(socketPath string, req protocol.Request) (*protocol.Response, e
 
 func handleWaybarStatus(cfg *config.Config, follow bool, c *cli.Command) error {
 	icons := state.Icons{
-		Idle:          c.String("icon-idle"),
-		Recording:     c.String("icon-recording"),
-		Paused:        c.String("icon-paused"),
-		ObsRecording:  c.String("icon-obs-recording"),
-		ObsPaused:     c.String("icon-obs-paused"),
+		Idle:         c.String("icon-idle"),
+		Recording:    c.String("icon-recording"),
+		Paused:       c.String("icon-paused"),
+		ObsRecording: c.String("icon-obs-recording"),
+		ObsPaused:    c.String("icon-obs-paused"),
 	}
 	if follow {
 		return followWaybarStatus(cfg, icons)

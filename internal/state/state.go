@@ -1,9 +1,8 @@
 package state
 
 import (
-	"sync"
-
 	"sway-screenshot/pkg/protocol"
+	"sync"
 )
 
 type State struct {
@@ -19,21 +18,21 @@ type State struct {
 
 // Icons holds custom icons for different states
 type Icons struct {
-	Idle          string
-	Recording     string
-	Paused        string
-	ObsRecording  string
-	ObsPaused     string
+	Idle         string
+	Recording    string
+	Paused       string
+	ObsRecording string
+	ObsPaused    string
 }
 
 // DefaultIcons returns the default icon set
 func DefaultIcons() Icons {
 	return Icons{
-		Idle:          "󰕧",
-		Recording:     "󰑊",
-		Paused:        "󰏤",
-		ObsRecording:  "󰑊",
-		ObsPaused:     "󰏤",
+		Idle:         "",
+		Recording:    "󰑊",
+		Paused:       "󰏤",
+		ObsRecording: "󰑊",
+		ObsPaused:    "󰏤",
 	}
 }
 

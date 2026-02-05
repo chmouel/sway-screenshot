@@ -4,7 +4,7 @@ After=sway-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/sway-screenshot daemon
+ExecStart=%h/.local/bin/desktop/sway-screenshot daemon
 Restart=on-failure
 RestartSec=5
 
