@@ -112,13 +112,17 @@ func waybarStatusCommand() *cli.Command {
 				Usage: "Icon for countdown state",
 				Value: "⏱",
 			},
+			&cli.BoolFlag{
+				Name:  "no-idle-output",
+				Usage: "Output nothing when idle (useful for minimal waybar display)",
+			},
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
 			cfg, err := config.Load()
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			return handleWaybarStatus(cfg, c.Bool("follow"), c)
+			return handleWaybarStatus(cfg, c.Bool("follow"), c.Bool("no-idle-output"), c)
 		},
 	}
 }
@@ -379,7 +383,7 @@ func sendRequest(socketPath string, req protocol.Request) (*protocol.Response, e
 	return &resp, nil
 }
 
-func handleWaybarStatus(cfg *config.Config, follow bool, c *cli.Command) error {
+func handleWaybarStatus(cfg *config.Config, follow bool, noIdleOutput bool, c *cli.Command) error {
 	icons := state.Icons{
 		Idle:         c.String("icon-idle"),
 		Recording:    c.String("icon-recording"),
@@ -389,13 +393,16 @@ func handleWaybarStatus(cfg *config.Config, follow bool, c *cli.Command) error {
 		Countdown:    c.String("icon-countdown"),
 	}
 	if follow {
-		return followWaybarStatus(cfg, icons)
+		return followWaybarStatus(cfg, icons, noIdleOutput)
 	}
-	return outputCurrentStatus(cfg, icons)
+	return outputCurrentStatus(cfg, icons, noIdleOutput)
 }
 
-func outputCurrentStatus(cfg *config.Config, icons state.Icons) error {
+func outputCurrentStatus(cfg *config.Config, icons state.Icons, noIdleOutput bool) error {
 	status := getWaybarStatus(cfg, icons)
+	if noIdleOutput && status.Class == "idle" {
+		status = &protocol.WaybarStatus{Text: "", Tooltip: "", Class: "idle", Alt: "idle"}
+	}
 	return json.NewEncoder(os.Stdout).Encode(status)
 }
 
@@ -444,7 +451,7 @@ func getWaybarStatus(cfg *config.Config, icons state.Icons) *protocol.WaybarStat
 	return &status
 }
 
-func followWaybarStatus(cfg *config.Config, icons state.Icons) error {
+func followWaybarStatus(cfg *config.Config, icons state.Icons, noIdleOutput bool) error {
 	var previousStatus *protocol.WaybarStatus
 	ticker := time.NewTicker(cfg.WaybarPollInterval)
 	defer ticker.Stop()
@@ -455,7 +462,11 @@ func followWaybarStatus(cfg *config.Config, icons state.Icons) error {
 
 	// Output initial status immediately
 	currentStatus := getWaybarStatus(cfg, icons)
-	if err := json.NewEncoder(os.Stdout).Encode(currentStatus); err != nil {
+	outputStatus := currentStatus
+	if noIdleOutput && currentStatus.Class == "idle" {
+		outputStatus = &protocol.WaybarStatus{Text: "", Tooltip: "", Class: "idle", Alt: "idle"}
+	}
+	if err := json.NewEncoder(os.Stdout).Encode(outputStatus); err != nil {
 		return err
 	}
 	previousStatus = currentStatus
@@ -465,7 +476,11 @@ func followWaybarStatus(cfg *config.Config, icons state.Icons) error {
 		case <-ticker.C:
 			currentStatus := getWaybarStatus(cfg, icons)
 			if !statusEqual(previousStatus, currentStatus) {
-				if err := json.NewEncoder(os.Stdout).Encode(currentStatus); err != nil {
+				outputStatus := currentStatus
+				if noIdleOutput && currentStatus.Class == "idle" {
+					outputStatus = &protocol.WaybarStatus{Text: "", Tooltip: "", Class: "idle", Alt: "idle"}
+				}
+				if err := json.NewEncoder(os.Stdout).Encode(outputStatus); err != nil {
 					return err
 				}
 				previousStatus = currentStatus
