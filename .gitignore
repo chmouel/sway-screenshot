@@ -4,5 +4,5 @@ coverage.out
 bin/*
 .claude/settings.local.json
 tmp/
-/lazyworktree
+/sway-screenshot
 /tmp

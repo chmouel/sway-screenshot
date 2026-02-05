@@ -207,6 +207,28 @@ func (d *Daemon) executeCommand(req protocol.Request) protocol.Response {
 
 	// Waybar status
 	case "waybar-status":
+		// Check if custom icons were provided in the request
+		if req.Options != nil {
+			if iconsMap, ok := req.Options["icons"].(map[string]interface{}); ok {
+				icons := state.DefaultIcons()
+				if idle, ok := iconsMap["Idle"].(string); ok {
+					icons.Idle = idle
+				}
+				if recording, ok := iconsMap["Recording"].(string); ok {
+					icons.Recording = recording
+				}
+				if paused, ok := iconsMap["Paused"].(string); ok {
+					icons.Paused = paused
+				}
+				if obsRecording, ok := iconsMap["ObsRecording"].(string); ok {
+					icons.ObsRecording = obsRecording
+				}
+				if obsPaused, ok := iconsMap["ObsPaused"].(string); ok {
+					icons.ObsPaused = obsPaused
+				}
+				d.state.SetIcons(icons)
+			}
+		}
 		status := d.state.GetWaybarStatus()
 		data, _ := json.Marshal(status)
 		return protocol.Response{

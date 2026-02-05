@@ -16,6 +16,7 @@ import (
 
 	"sway-screenshot/internal/config"
 	"sway-screenshot/internal/daemon"
+	"sway-screenshot/internal/state"
 	"sway-screenshot/pkg/protocol"
 )
 
@@ -82,13 +83,38 @@ func waybarStatusCommand() *cli.Command {
 				Name:  "follow",
 				Usage: "Continuously monitor and output on state change",
 			},
+			&cli.StringFlag{
+				Name:  "icon-idle",
+				Usage: "Icon for idle/ready state",
+				Value: "󰕧",
+			},
+			&cli.StringFlag{
+				Name:  "icon-recording",
+				Usage: "Icon for recording state",
+				Value: "󰑊",
+			},
+			&cli.StringFlag{
+				Name:  "icon-paused",
+				Usage: "Icon for paused recording state",
+				Value: "󰏤",
+			},
+			&cli.StringFlag{
+				Name:  "icon-obs-recording",
+				Usage: "Icon for OBS recording state",
+				Value: "󰑊",
+			},
+			&cli.StringFlag{
+				Name:  "icon-obs-paused",
+				Usage: "Icon for OBS paused recording state",
+				Value: "󰏤",
+			},
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
 			cfg, err := config.Load()
 			if err != nil {
 				return fmt.Errorf("failed to load config: %w", err)
 			}
-			return handleWaybarStatus(cfg, c.Bool("follow"))
+			return handleWaybarStatus(cfg, c.Bool("follow"), c)
 		},
 	}
 }
@@ -349,23 +375,30 @@ func sendRequest(socketPath string, req protocol.Request) (*protocol.Response, e
 	return &resp, nil
 }
 
-func handleWaybarStatus(cfg *config.Config, follow bool) error {
-	if follow {
-		return followWaybarStatus(cfg)
+func handleWaybarStatus(cfg *config.Config, follow bool, c *cli.Command) error {
+	icons := state.Icons{
+		Idle:          c.String("icon-idle"),
+		Recording:     c.String("icon-recording"),
+		Paused:        c.String("icon-paused"),
+		ObsRecording:  c.String("icon-obs-recording"),
+		ObsPaused:     c.String("icon-obs-paused"),
 	}
-	return outputCurrentStatus(cfg)
+	if follow {
+		return followWaybarStatus(cfg, icons)
+	}
+	return outputCurrentStatus(cfg, icons)
 }
 
-func outputCurrentStatus(cfg *config.Config) error {
-	status := getWaybarStatus(cfg)
+func outputCurrentStatus(cfg *config.Config, icons state.Icons) error {
+	status := getWaybarStatus(cfg, icons)
 	return json.NewEncoder(os.Stdout).Encode(status)
 }
 
-func getWaybarStatus(cfg *config.Config) *protocol.WaybarStatus {
+func getWaybarStatus(cfg *config.Config, icons state.Icons) *protocol.WaybarStatus {
 	if !isDaemonRunning(cfg.SocketPath) {
 		// Daemon not running, return idle status
 		return &protocol.WaybarStatus{
-			Text:    "󰕧",
+			Text:    icons.Idle,
 			Tooltip: "Ready for screenshot/recording",
 			Class:   "idle",
 			Alt:     "idle",
@@ -375,13 +408,16 @@ func getWaybarStatus(cfg *config.Config) *protocol.WaybarStatus {
 	req := protocol.Request{
 		Command: "execute",
 		Action:  "waybar-status",
+		Options: map[string]interface{}{
+			"icons": icons,
+		},
 	}
 
 	resp, err := sendRequest(cfg.SocketPath, req)
 	if err != nil {
 		// Fallback to idle status on error
 		return &protocol.WaybarStatus{
-			Text:    "󰕧",
+			Text:    icons.Idle,
 			Tooltip: "Ready for screenshot/recording",
 			Class:   "idle",
 			Alt:     "idle",
@@ -393,7 +429,7 @@ func getWaybarStatus(cfg *config.Config) *protocol.WaybarStatus {
 	if err := json.Unmarshal([]byte(resp.Message), &status); err != nil {
 		// Fallback to idle status on parse error
 		return &protocol.WaybarStatus{
-			Text:    "󰕧",
+			Text:    icons.Idle,
 			Tooltip: "Ready for screenshot/recording",
 			Class:   "idle",
 			Alt:     "idle",
@@ -403,7 +439,7 @@ func getWaybarStatus(cfg *config.Config) *protocol.WaybarStatus {
 	return &status
 }
 
-func followWaybarStatus(cfg *config.Config) error {
+func followWaybarStatus(cfg *config.Config, icons state.Icons) error {
 	var previousStatus *protocol.WaybarStatus
 	ticker := time.NewTicker(cfg.WaybarPollInterval)
 	defer ticker.Stop()
@@ -413,7 +449,7 @@ func followWaybarStatus(cfg *config.Config) error {
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 
 	// Output initial status immediately
-	currentStatus := getWaybarStatus(cfg)
+	currentStatus := getWaybarStatus(cfg, icons)
 	if err := json.NewEncoder(os.Stdout).Encode(currentStatus); err != nil {
 		return err
 	}
@@ -422,7 +458,7 @@ func followWaybarStatus(cfg *config.Config) error {
 	for {
 		select {
 		case <-ticker.C:
-			currentStatus := getWaybarStatus(cfg)
+			currentStatus := getWaybarStatus(cfg, icons)
 			if !statusEqual(previousStatus, currentStatus) {
 				if err := json.NewEncoder(os.Stdout).Encode(currentStatus); err != nil {
 					return err
