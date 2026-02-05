@@ -138,6 +138,15 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 func (d *Daemon) executeCommand(req protocol.Request) protocol.Response {
 	ctx := d.ctx
 
+	// Extract timeout and create timeout context if specified
+	if req.Options != nil {
+		if t, ok := req.Options["timeout"].(float64); ok && t > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, time.Duration(t)*time.Second)
+			defer cancel()
+		}
+	}
+
 	// Extract common options
 	delay := 0
 	useCurrentScreen := false
