@@ -85,7 +85,7 @@ func waybarStatusCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:  "icon-idle",
 				Usage: "Icon for idle/ready state",
-				Value: "",
+				Value: "•",
 			},
 			&cli.StringFlag{
 				Name:  "icon-recording",
@@ -183,7 +183,7 @@ func toggleRecordCommand() *cli.Command {
 			},
 			&cli.IntFlag{
 				Name:    "delay",
-				Aliases: []string{"t"},
+				Aliases: []string{"w"},
 				Usage:   "Delay before starting recording in seconds",
 				Value:   0,
 			},
@@ -194,7 +194,7 @@ func toggleRecordCommand() *cli.Command {
 			},
 			&cli.IntFlag{
 				Name:    "timeout",
-				Aliases: []string{"T"},
+				Aliases: []string{"t"},
 				Usage:   "Maximum execution time in seconds (0 = no timeout)",
 				Value:   0,
 			},
@@ -234,7 +234,7 @@ func createSimpleCommand(name, usage string) *cli.Command {
 		Flags: []cli.Flag{
 			&cli.IntFlag{
 				Name:    "timeout",
-				Aliases: []string{"T"},
+				Aliases: []string{"t"},
 				Usage:   "Maximum execution time in seconds (0 = no timeout)",
 				Value:   0,
 			},
@@ -269,7 +269,7 @@ func createScreenshotCommand(name, usage string) *cli.Command {
 		Flags: []cli.Flag{
 			&cli.IntFlag{
 				Name:    "delay",
-				Aliases: []string{"t"},
+				Aliases: []string{"w"},
 				Usage:   "Delay capture/recording in seconds",
 				Value:   0,
 			},
@@ -280,7 +280,7 @@ func createScreenshotCommand(name, usage string) *cli.Command {
 			},
 			&cli.IntFlag{
 				Name:    "timeout",
-				Aliases: []string{"T"},
+				Aliases: []string{"t"},
 				Usage:   "Maximum execution time in seconds (0 = no timeout)",
 				Value:   0,
 			},

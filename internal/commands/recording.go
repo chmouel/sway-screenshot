@@ -176,14 +176,22 @@ func (h *RecordingHandler) PauseRecording(ctx context.Context) error {
 	return nil
 }
 
-// ToggleRecord toggles recording state: starts if not recording, stops if recording
-func (h *RecordingHandler) ToggleRecord(ctx context.Context, startAction string, delay int, useCurrentScreen bool) error {
+// ToggleRecord toggles recording state: starts if not recording, stops if recording.
+// The timeout parameter is only applied when starting a recording, not when stopping.
+func (h *RecordingHandler) ToggleRecord(ctx context.Context, startAction string, delay int, useCurrentScreen bool, timeout int) error {
 	// Check current state
 	currentState := h.state.GetState()
 
 	if currentState.Recording {
-		// Currently recording, stop it
+		// Currently recording, stop it (no timeout applied)
 		return h.StopRecording(ctx)
+	}
+
+	// Apply timeout only when starting a recording
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+		defer cancel()
 	}
 
 	// Not recording, validate and start with specified action

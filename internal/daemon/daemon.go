@@ -138,8 +138,9 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 func (d *Daemon) executeCommand(req protocol.Request) protocol.Response {
 	ctx := d.ctx
 
-	// Extract timeout and create timeout context if specified
-	if req.Options != nil {
+	// Extract timeout and create timeout context if specified.
+	// Skip for toggle-record which handles timeout internally (only applies when starting).
+	if req.Options != nil && req.Action != "toggle-record" {
 		if t, ok := req.Options["timeout"].(float64); ok && t > 0 {
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithTimeout(ctx, time.Duration(t)*time.Second)
@@ -200,12 +201,16 @@ func (d *Daemon) executeCommand(req protocol.Request) protocol.Response {
 
 	case "toggle-record":
 		startAction := "movie-selection" // default
+		timeout := 0
 		if req.Options != nil {
 			if sa, ok := req.Options["start_action"].(string); ok && sa != "" {
 				startAction = sa
 			}
+			if t, ok := req.Options["timeout"].(float64); ok {
+				timeout = int(t)
+			}
 		}
-		err = d.recordingHandler.ToggleRecord(ctx, startAction, delay, useCurrentScreen)
+		err = d.recordingHandler.ToggleRecord(ctx, startAction, delay, useCurrentScreen, timeout)
 
 	// OBS commands
 	case "obs-toggle-recording":
