@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
-
 	"sway-screenshot/internal/config"
 	"sway-screenshot/internal/external"
 	"sway-screenshot/internal/notify"
 	"sway-screenshot/internal/state"
+	"time"
 )
 
 type OBSHandler struct {
@@ -33,7 +32,6 @@ func (h *OBSHandler) ToggleRecording(ctx context.Context) error {
 
 	if strings.Contains(status, "false") || !strings.Contains(status, "Recording: true") {
 		// Start recording
-		notify.Send(800, h.cfg.RecordingStartIcon, "Recording has started")
 		time.Sleep(1 * time.Second)
 
 		if _, err := external.OBSCli(ctx, "recording", "start"); err != nil {
