@@ -43,7 +43,7 @@ func Slurp(ctx context.Context, color string) (string, error) {
 		args = append(args, "-c", color)
 	}
 
-	cmd := exec.CommandContext(ctx, "slurp", args...)
+	cmd := exec.CommandContext(ctx, "slurp", args...) //nolint:gosec
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -83,7 +83,7 @@ func StartWfRecorder(ctx context.Context, geometry, output, filename string) (*e
 
 	args = append(args, "-f", filename)
 
-	cmd := exec.CommandContext(ctx, "wf-recorder", args...)
+	cmd := exec.CommandContext(ctx, "wf-recorder", args...) //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -104,7 +104,7 @@ func Satty(ctx context.Context, inputFile, outputFile string, earlyExit bool) er
 		args = append(args, "--early-exit")
 	}
 
-	cmd := exec.CommandContext(ctx, "satty", args...)
+	cmd := exec.CommandContext(ctx, "satty", args...) //nolint:gosec
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -119,7 +119,7 @@ func Zenity(ctx context.Context, text, entryText string) (string, error) {
 		"--entry-text", entryText,
 	}
 
-	cmd := exec.CommandContext(ctx, "zenity", args...)
+	cmd := exec.CommandContext(ctx, "zenity", args...) //nolint:gosec
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -136,7 +136,7 @@ func AIChat(ctx context.Context, model, imagePath, prompt string) (string, error
 		prompt,
 	}
 
-	cmd := exec.CommandContext(ctx, "aichat", args...)
+	cmd := exec.CommandContext(ctx, "aichat", args...) //nolint:gosec
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -158,7 +158,7 @@ func Ffmpeg(ctx context.Context, inputFile, outputFile string) error {
 		outputFile,
 	}
 
-	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...) //nolint:gosec
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -180,7 +180,7 @@ func OBSCli(ctx context.Context, args ...string) (string, error) {
 	}
 	cmdArgs = append(cmdArgs, args...)
 
-	cmd := exec.CommandContext(ctx, "obs-cli", cmdArgs...)
+	cmd := exec.CommandContext(ctx, "obs-cli", cmdArgs...) //nolint:gosec
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -196,7 +196,7 @@ func Wofi(ctx context.Context, prompt string, options []string) (string, error) 
 		"--prompt", prompt,
 	}
 
-	cmd := exec.CommandContext(ctx, "wofi", args...)
+	cmd := exec.CommandContext(ctx, "wofi", args...) //nolint:gosec
 	cmd.Stdin = strings.NewReader(strings.Join(options, "\n"))
 
 	output, err := cmd.Output()
@@ -217,7 +217,7 @@ func Nautilus(ctx context.Context, fileURI string) error {
 func CleanupOldFiles(ctx context.Context, directory string, olderThan time.Duration) error {
 	beforeTime := fmt.Sprintf("%dd", int(olderThan.Hours()/24))
 
-	cmd := exec.CommandContext(ctx, "fd",
+	cmd := exec.CommandContext(ctx, "fd", //nolint:gosec
 		"-t", "f",
 		"--full-path", directory,
 		"--changed-before", beforeTime,

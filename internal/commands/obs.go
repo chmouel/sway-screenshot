@@ -4,18 +4,21 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
+
 	"sway-easyshot/internal/config"
 	"sway-easyshot/internal/external"
 	"sway-easyshot/internal/notify"
 	"sway-easyshot/internal/state"
-	"time"
 )
 
+// OBSHandler provides methods to interact with OBS.
 type OBSHandler struct {
 	cfg   *config.Config
 	state *state.State
 }
 
+// NewOBSHandler creates a new OBS handler instance.
 func NewOBSHandler(cfg *config.Config, st *state.State) *OBSHandler {
 	return &OBSHandler{
 		cfg:   cfg,
@@ -23,10 +26,11 @@ func NewOBSHandler(cfg *config.Config, st *state.State) *OBSHandler {
 	}
 }
 
+// ToggleRecording toggles OBS recording state (start/stop).
 func (h *OBSHandler) ToggleRecording(ctx context.Context) error {
 	status, err := external.OBSCli(ctx, "recording", "status")
 	if err != nil {
-		notify.Send(2000, h.cfg.ScreenshotIcon, "Failed to get OBS status")
+		_ = notify.Send(2000, h.cfg.ScreenshotIcon, "Failed to get OBS status")
 		return fmt.Errorf("failed to get OBS recording status: %w", err)
 	}
 
@@ -48,12 +52,13 @@ func (h *OBSHandler) ToggleRecording(ctx context.Context) error {
 	}
 
 	time.Sleep(2 * time.Second)
-	notify.Send(2000, h.cfg.RecordingStopIcon, "Recording has stopped")
+	_ = notify.Send(2000, h.cfg.RecordingStopIcon, "Recording has stopped")
 
 	h.state.SetOBSState(false, false)
 	return nil
 }
 
+// TogglePause toggles OBS pause state (paused/resumed).
 func (h *OBSHandler) TogglePause(ctx context.Context) error {
 	if _, err := external.OBSCli(ctx, "recording", "pause", "toggle"); err != nil {
 		return fmt.Errorf("failed to toggle OBS pause: %w", err)
@@ -67,10 +72,10 @@ func (h *OBSHandler) TogglePause(ctx context.Context) error {
 	isPaused := strings.Contains(status, "Paused: true")
 
 	if isPaused {
-		notify.Send(2000, h.cfg.RecordingPauseIcon, "Recording paused")
+		_ = notify.Send(2000, h.cfg.RecordingPauseIcon, "Recording paused")
 		h.state.SetOBSState(true, true)
 	} else {
-		notify.Send(2000, h.cfg.RecordingStartIcon, "Recording resumed")
+		_ = notify.Send(2000, h.cfg.RecordingStartIcon, "Recording resumed")
 		h.state.SetOBSState(true, false)
 	}
 

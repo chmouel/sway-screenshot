@@ -15,11 +15,13 @@ import (
 	"sway-easyshot/internal/sway"
 )
 
+// ScreenshotHandler provides methods for screenshot operations.
 type ScreenshotHandler struct {
 	cfg   *config.Config
 	state *state.State
 }
 
+// NewScreenshotHandler creates a new screenshot handler instance.
 func NewScreenshotHandler(cfg *config.Config, st *state.State) *ScreenshotHandler {
 	return &ScreenshotHandler{cfg: cfg, state: st}
 }
@@ -36,6 +38,7 @@ func sleepWithCountdown(st *state.State, delay int) {
 	st.ClearCountdown()
 }
 
+// CurrentWindowClipboard captures the focused window and copies it to clipboard.
 func (h *ScreenshotHandler) CurrentWindowClipboard(ctx context.Context, delay int) error {
 	if err := notify.CaptureDelay(delay, "window to clipboard", h.cfg.ScreenshotIcon); err != nil {
 		return err
@@ -56,6 +59,7 @@ func (h *ScreenshotHandler) CurrentWindowClipboard(ctx context.Context, delay in
 	return external.WlCopy(ctx, data, "image/png")
 }
 
+// CurrentWindowFile captures the focused window and saves it to a file.
 func (h *ScreenshotHandler) CurrentWindowFile(ctx context.Context, delay int) error {
 	if err := notify.CaptureDelay(delay, "window to file", h.cfg.ScreenshotIcon); err != nil {
 		return err
@@ -74,9 +78,10 @@ func (h *ScreenshotHandler) CurrentWindowFile(ctx context.Context, delay int) er
 		return fmt.Errorf("failed to capture screenshot: %w", err)
 	}
 
-	return notify.Send(3000, h.cfg.ScreenshotIcon, fmt.Sprintf("Screenshot saved: %s", filepath.Base(file)))
+	return notify.Send(3000, h.cfg.ScreenshotIcon, fmt.Sprintf("Screenshot saved: %s", filepath.Base(file))) //nolint:errcheck
 }
 
+// CurrentScreenClipboard captures the current screen and copies it to clipboard.
 func (h *ScreenshotHandler) CurrentScreenClipboard(ctx context.Context, delay int, useCurrentScreen bool) error {
 	output, err := sway.SelectOutput(ctx, useCurrentScreen)
 	if err != nil || output == "" {
@@ -97,6 +102,7 @@ func (h *ScreenshotHandler) CurrentScreenClipboard(ctx context.Context, delay in
 	return external.WlCopy(ctx, data, "image/png")
 }
 
+// SelectionFile captures a selected region and saves it to a file.
 func (h *ScreenshotHandler) SelectionFile(ctx context.Context, delay int) error {
 	if err := notify.CaptureDelay(delay, "selection to file", h.cfg.ScreenshotIcon); err != nil {
 		return err
@@ -133,7 +139,7 @@ func (h *ScreenshotHandler) SelectionFile(ctx context.Context, delay int) error 
 
 	switch action {
 	case "copyclip":
-		data, err := os.ReadFile(file)
+		data, err := os.ReadFile(file) //nolint:gosec
 		if err != nil {
 			return err
 		}
@@ -150,7 +156,7 @@ func (h *ScreenshotHandler) SelectionFile(ctx context.Context, delay int) error 
 
 		ext := filepath.Ext(file)
 		if !strings.HasSuffix(newname, ext) {
-			newname = newname + ext
+			newname += ext
 		}
 
 		if action == "edit" {
@@ -165,6 +171,7 @@ func (h *ScreenshotHandler) SelectionFile(ctx context.Context, delay int) error 
 	return nil
 }
 
+// SelectionEdit captures a selected region, opens an editor, and saves the result.
 func (h *ScreenshotHandler) SelectionEdit(ctx context.Context, delay int) error {
 	if err := notify.CaptureDelay(delay, "selection edit", h.cfg.ScreenshotIcon); err != nil {
 		return err
@@ -184,15 +191,16 @@ func (h *ScreenshotHandler) SelectionEdit(ctx context.Context, delay int) error 
 
 	// Write to temporary file for satty
 	tmpFile := fmt.Sprintf("/tmp/screenshot-%d.png", time.Now().Unix())
-	if err := os.WriteFile(tmpFile, data, 0644); err != nil {
+	if err := os.WriteFile(tmpFile, data, 0o600); err != nil {
 		return err
 	}
-	defer os.Remove(tmpFile)
+	defer func() { _ = os.Remove(tmpFile) }()
 
 	outputFile := filepath.Join(h.cfg.SaveLocation, fmt.Sprintf("screenshot-%s.png", time.Now().Format("20060102-15:04:05")))
 	return external.Satty(ctx, tmpFile, outputFile, true)
 }
 
+// SelectionClipboard captures a selected region and copies it to clipboard.
 func (h *ScreenshotHandler) SelectionClipboard(ctx context.Context, delay int) error {
 	if err := notify.CaptureDelay(delay, "selection to clipboard", h.cfg.ScreenshotIcon); err != nil {
 		return err
@@ -241,10 +249,10 @@ func (h *ScreenshotHandler) SelectionClipboard(ctx context.Context, delay int) e
 			return err
 		}
 
-		if err := os.WriteFile(tmpFile, clipData, 0644); err != nil {
+		if err := os.WriteFile(tmpFile, clipData, 0o600); err != nil {
 			return err
 		}
-		defer os.Remove(tmpFile)
+		defer func() { _ = os.Remove(tmpFile) }()
 
 		aiName, err := external.AIChat(ctx, h.cfg.AIModelImage, tmpFile,
 			"identify a filename for that image and return only the slug of the filename, nothing else")
@@ -252,7 +260,7 @@ func (h *ScreenshotHandler) SelectionClipboard(ctx context.Context, delay int) e
 		if err == nil && aiName != "" {
 			defaultName = aiName
 			if !strings.HasSuffix(defaultName, ".png") {
-				defaultName = defaultName + ".png"
+				defaultName += ".png"
 			}
 		}
 	}
@@ -263,7 +271,7 @@ func (h *ScreenshotHandler) SelectionClipboard(ctx context.Context, delay int) e
 	}
 
 	if !strings.HasSuffix(newname, ".png") {
-		newname = newname + ".png"
+		newname += ".png"
 	}
 
 	outputFile := filepath.Join(h.cfg.SaveLocation, newname)
@@ -275,10 +283,10 @@ func (h *ScreenshotHandler) SelectionClipboard(ctx context.Context, delay int) e
 		}
 
 		tmpFile := fmt.Sprintf("/tmp/screenshot-%d.png", time.Now().Unix())
-		if err := os.WriteFile(tmpFile, clipData, 0644); err != nil {
+		if err := os.WriteFile(tmpFile, clipData, 0o600); err != nil {
 			return err
 		}
-		defer os.Remove(tmpFile)
+		defer func() { _ = os.Remove(tmpFile) }()
 
 		return external.Satty(ctx, tmpFile, outputFile, true)
 	}
@@ -289,7 +297,7 @@ func (h *ScreenshotHandler) SelectionClipboard(ctx context.Context, delay int) e
 		return err
 	}
 
-	if err := os.WriteFile(outputFile, clipData, 0644); err != nil {
+	if err := os.WriteFile(outputFile, clipData, 0o600); err != nil {
 		return err
 	}
 

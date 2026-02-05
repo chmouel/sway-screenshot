@@ -5,20 +5,23 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"syscall"
+	"time"
+
 	"sway-easyshot/internal/config"
 	"sway-easyshot/internal/external"
 	"sway-easyshot/internal/notify"
 	"sway-easyshot/internal/state"
 	"sway-easyshot/internal/sway"
-	"syscall"
-	"time"
 )
 
+// RecordingHandler provides methods for video recording operations.
 type RecordingHandler struct {
 	cfg   *config.Config
 	state *state.State
 }
 
+// NewRecordingHandler creates a new recording handler instance.
 func NewRecordingHandler(cfg *config.Config, st *state.State) *RecordingHandler {
 	return &RecordingHandler{
 		cfg:   cfg,
@@ -26,6 +29,7 @@ func NewRecordingHandler(cfg *config.Config, st *state.State) *RecordingHandler 
 	}
 }
 
+// MovieSelection records a video of a selected region.
 func (h *RecordingHandler) MovieSelection(ctx context.Context, delay int) error {
 	if err := notify.CaptureDelay(delay, "movie selection", h.cfg.RecordingStartIcon); err != nil {
 		return err
@@ -41,6 +45,7 @@ func (h *RecordingHandler) MovieSelection(ctx context.Context, delay int) error 
 	return h.startRecording(ctx, geom, "")
 }
 
+// MovieScreen records a video of the screen (or current screen if useCurrentScreen is true).
 func (h *RecordingHandler) MovieScreen(ctx context.Context, delay int, useCurrentScreen bool) error {
 	output, err := sway.SelectOutput(ctx, useCurrentScreen)
 	if err != nil || output == "" {
@@ -56,6 +61,7 @@ func (h *RecordingHandler) MovieScreen(ctx context.Context, delay int, useCurren
 	return h.startRecording(ctx, "", output)
 }
 
+// MovieCurrentWindow records a video of the currently focused window.
 func (h *RecordingHandler) MovieCurrentWindow(ctx context.Context, delay int) error {
 	if err := notify.CaptureDelay(delay, "movie current window", h.cfg.RecordingStartIcon); err != nil {
 		return err
@@ -82,7 +88,7 @@ func (h *RecordingHandler) startRecording(ctx context.Context, geometry, output 
 	}
 
 	// Save base filename to cache
-	if err := os.WriteFile(h.cfg.CacheFile, []byte(base), 0644); err != nil {
+	if err := os.WriteFile(h.cfg.CacheFile, []byte(base), 0o600); err != nil {
 		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 
@@ -97,16 +103,17 @@ func (h *RecordingHandler) startRecording(ctx context.Context, geometry, output 
 
 	// Monitor process in background
 	go func() {
-		cmd.Wait()
+		_ = cmd.Wait()
 		h.state.SetRecording(false, "", 0)
 	}()
 
 	return nil
 }
 
+// StopRecording stops the current recording and converts it to MP4.
 func (h *RecordingHandler) StopRecording(ctx context.Context) error {
 	// Kill wf-recorder
-	exec.Command("killall", "-s", "SIGINT", "wf-recorder").Run()
+	_ = exec.Command("killall", "-s", "SIGINT", "wf-recorder").Run() //nolint:gosec
 
 	// Wait a bit for process to terminate
 	time.Sleep(500 * time.Millisecond)
@@ -122,11 +129,11 @@ func (h *RecordingHandler) StopRecording(ctx context.Context) error {
 
 	// Check if .avi file exists
 	if _, err := os.Stat(aviFile); os.IsNotExist(err) {
-		notify.Send(5000, h.cfg.ScreenshotIcon, fmt.Sprintf("Could not find %s", aviFile))
+		_ = notify.Send(5000, h.cfg.ScreenshotIcon, fmt.Sprintf("Could not find %s", aviFile))
 		return fmt.Errorf("recording file not found: %s", aviFile)
 	}
 
-	notify.Send(3000, h.cfg.ScreenshotIcon, "Recording finished, converting")
+	_ = notify.Send(3000, h.cfg.ScreenshotIcon, "Recording finished, converting")
 
 	// Convert to mp4
 	mp4File := base + ".mp4"
@@ -135,17 +142,18 @@ func (h *RecordingHandler) StopRecording(ctx context.Context) error {
 	}
 
 	// Clean up
-	os.Remove(aviFile)
-	os.Remove(h.cfg.CacheFile)
+	_ = os.Remove(aviFile)
+	_ = os.Remove(h.cfg.CacheFile)
 
 	// Update state
 	h.state.SetRecording(false, "", 0)
 
-	notify.Send(5000, h.cfg.RecordingStopIcon, fmt.Sprintf("%s is available", base+".mp4"))
+	_ = notify.Send(5000, h.cfg.RecordingStopIcon, fmt.Sprintf("%s is available", base+".mp4"))
 
 	return nil
 }
 
+// PauseRecording pauses or resumes the current recording.
 func (h *RecordingHandler) PauseRecording(ctx context.Context) error {
 	pid := h.state.GetRecordingPID()
 	if pid == 0 {
@@ -168,9 +176,9 @@ func (h *RecordingHandler) PauseRecording(ctx context.Context) error {
 	h.state.SetPaused(newPausedState)
 
 	if newPausedState {
-		notify.Send(2000, h.cfg.RecordingPauseIcon, "Recording paused")
+		_ = notify.Send(2000, h.cfg.RecordingPauseIcon, "Recording paused")
 	} else {
-		notify.Send(2000, h.cfg.RecordingStartIcon, "Recording resumed")
+		_ = notify.Send(2000, h.cfg.RecordingStartIcon, "Recording resumed")
 	}
 
 	return nil

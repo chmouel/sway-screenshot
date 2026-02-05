@@ -20,6 +20,7 @@ import (
 	"sway-easyshot/pkg/protocol"
 )
 
+// Daemon manages the socket server for executing screenshot and recording commands.
 type Daemon struct {
 	cfg               *config.Config
 	state             *state.State
@@ -32,6 +33,7 @@ type Daemon struct {
 	debug             bool
 }
 
+// New creates a new daemon instance.
 func New(cfg *config.Config, debug bool) *Daemon {
 	st := state.NewState()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -48,9 +50,10 @@ func New(cfg *config.Config, debug bool) *Daemon {
 	}
 }
 
+// Start starts the daemon server listening on the unix socket.
 func (d *Daemon) Start() error {
 	// Remove existing socket if present
-	os.Remove(d.cfg.SocketPath)
+	_ = os.Remove(d.cfg.SocketPath)
 
 	var err error
 	d.listener, err = net.Listen("unix", d.cfg.SocketPath)
@@ -59,7 +62,7 @@ func (d *Daemon) Start() error {
 	}
 
 	// Set socket permissions
-	if err := os.Chmod(d.cfg.SocketPath, 0600); err != nil {
+	if err := os.Chmod(d.cfg.SocketPath, 0o600); err != nil {
 		return fmt.Errorf("failed to set socket permissions: %w", err)
 	}
 
@@ -95,19 +98,20 @@ func (d *Daemon) Start() error {
 	}
 }
 
+// Stop stops the daemon server.
 func (d *Daemon) Stop() {
 	log.Println("Stopping daemon")
 	d.cancel()
 
 	if d.listener != nil {
-		d.listener.Close()
+		_ = d.listener.Close()
 	}
 
-	os.Remove(d.cfg.SocketPath)
+	_ = os.Remove(d.cfg.SocketPath)
 }
 
 func (d *Daemon) handleConnection(conn net.Conn) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	decoder := json.NewDecoder(conn)
 	encoder := json.NewEncoder(conn)
@@ -118,7 +122,7 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 			return
 		}
 		log.Printf("Error decoding request: %v", err)
-		encoder.Encode(protocol.Response{
+		_ = encoder.Encode(protocol.Response{
 			Success: false,
 			Message: fmt.Sprintf("Invalid request: %v", err),
 		})

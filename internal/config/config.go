@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Config holds all configuration for sway-easyshot.
 type Config struct {
 	SaveLocation       string
 	CacheFile          string
@@ -20,6 +21,7 @@ type Config struct {
 	WaybarPollInterval time.Duration
 }
 
+// Load loads the configuration from environment variables and defaults.
 func Load() (*Config, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -42,17 +44,19 @@ func Load() (*Config, error) {
 	}
 
 	// Ensure save location exists
-	if err := os.MkdirAll(cfg.SaveLocation, 0755); err != nil {
+	if err := os.MkdirAll(cfg.SaveLocation, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create save location: %w", err)
 	}
 
 	return cfg, nil
 }
 
+// GenerateFilename generates a unique filename for a screenshot.
 func (c *Config) GenerateFilename() string {
 	return filepath.Join(c.SaveLocation, fmt.Sprintf("Screenshot_%s.png", time.Now().Format("2006-01-02-15:04.05")))
 }
 
+// GenerateRecordingBase generates a base filename for a recording.
 func (c *Config) GenerateRecordingBase() string {
 	return filepath.Join(c.SaveLocation, fmt.Sprintf("recording-%s", time.Now().Format("20060102-15h04")))
 }

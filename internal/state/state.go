@@ -2,11 +2,13 @@ package state
 
 import (
 	"fmt"
-	"sway-easyshot/pkg/protocol"
 	"sync"
 	"time"
+
+	"sway-easyshot/pkg/protocol"
 )
 
+// State tracks the current state of recordings and OBS.
 type State struct {
 	mu                 sync.RWMutex
 	recording          bool
@@ -20,7 +22,7 @@ type State struct {
 	icons              Icons
 }
 
-// Icons holds custom icons for different states
+// Icons holds custom icons for different states.
 type Icons struct {
 	Idle         string
 	Recording    string
@@ -30,7 +32,7 @@ type Icons struct {
 	Countdown    string
 }
 
-// DefaultIcons returns the default icon set
+// DefaultIcons returns the default icon set.
 func DefaultIcons() Icons {
 	return Icons{
 		Idle:         "",
@@ -42,19 +44,21 @@ func DefaultIcons() Icons {
 	}
 }
 
+// NewState creates a new state instance with default icons.
 func NewState() *State {
 	return &State{
 		icons: DefaultIcons(),
 	}
 }
 
-// NewStateWithIcons creates a new State with custom icons
+// NewStateWithIcons creates a new State with custom icons.
 func NewStateWithIcons(icons Icons) *State {
 	return &State{
 		icons: icons,
 	}
 }
 
+// GetState returns the current state snapshot.
 func (s *State) GetState() *protocol.State {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -68,6 +72,7 @@ func (s *State) GetState() *protocol.State {
 	}
 }
 
+// SetRecording sets the recording state and file information.
 func (s *State) SetRecording(recording bool, file string, pid int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -82,7 +87,8 @@ func (s *State) SetRecording(recording bool, file string, pid int) {
 	}
 }
 
-func (s *State) SetOBSState(recording bool, paused bool) {
+// SetOBSState sets the OBS recording and pause state.
+func (s *State) SetOBSState(recording, paused bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -90,32 +96,35 @@ func (s *State) SetOBSState(recording bool, paused bool) {
 	s.obsPaused = paused
 }
 
+// GetRecordingPID returns the process ID of the current recording.
 func (s *State) GetRecordingPID() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.recordingPID
 }
 
+// SetPaused sets the pause state of the current recording.
 func (s *State) SetPaused(paused bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.paused = paused
 }
 
-// SetCountdown sets the countdown remaining seconds
+// SetCountdown sets the countdown remaining seconds.
 func (s *State) SetCountdown(seconds int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.countdownRemaining = seconds
 }
 
-// ClearCountdown clears the countdown state
+// ClearCountdown clears the countdown state.
 func (s *State) ClearCountdown() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.countdownRemaining = 0
 }
 
+// GetWaybarStatus returns the current waybar status representation.
 func (s *State) GetWaybarStatus() *protocol.WaybarStatus {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -175,7 +184,7 @@ func (s *State) GetWaybarStatus() *protocol.WaybarStatus {
 	}
 }
 
-// SetIcons updates the icons used for waybar status
+// SetIcons updates the icons used for waybar status.
 func (s *State) SetIcons(icons Icons) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -9,12 +9,13 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"syscall"
+	"time"
+
 	"sway-easyshot/internal/config"
 	"sway-easyshot/internal/daemon"
 	"sway-easyshot/internal/state"
 	"sway-easyshot/pkg/protocol"
-	"syscall"
-	"time"
 
 	"github.com/urfave/cli/v3"
 )
@@ -333,7 +334,7 @@ func isDaemonRunning(socketPath string) bool {
 	if err != nil {
 		return false
 	}
-	conn.Close()
+	_ = conn.Close()
 	return true
 }
 
@@ -344,7 +345,7 @@ func startDaemon(cfg *config.Config) error {
 		return err
 	}
 
-	cmd := exec.Command(exe, "daemon")
+	cmd := exec.Command(exe, "daemon") //nolint:gosec
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 
@@ -353,7 +354,7 @@ func startDaemon(cfg *config.Config) error {
 	}
 
 	// Detach from parent
-	cmd.Process.Release()
+	_ = cmd.Process.Release()
 
 	return nil
 }
@@ -363,10 +364,10 @@ func sendRequest(socketPath string, req protocol.Request) (*protocol.Response, e
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Set timeout
-	conn.SetDeadline(time.Now().Add(30 * time.Second))
+	_ = conn.SetDeadline(time.Now().Add(30 * time.Second))
 
 	encoder := json.NewEncoder(conn)
 	decoder := json.NewDecoder(conn)
@@ -383,7 +384,7 @@ func sendRequest(socketPath string, req protocol.Request) (*protocol.Response, e
 	return &resp, nil
 }
 
-func handleWaybarStatus(cfg *config.Config, follow bool, noIdleOutput bool, c *cli.Command) error {
+func handleWaybarStatus(cfg *config.Config, follow, noIdleOutput bool, c *cli.Command) error {
 	icons := state.Icons{
 		Idle:         c.String("icon-idle"),
 		Recording:    c.String("icon-recording"),
