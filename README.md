@@ -85,7 +85,14 @@ sway-easyshot obs-toggle-pause
 
 ## Sway Configuration
 
-```config
+```ini
+bindsym Print exec sway-easyshot selection-clipboard
+bindsym Shift+Print exec sway-easyshot selection-file
+bindsym $alt+Print exec sway-easyshot selection-edit
+bindsym $super+Print exec sway-easyshot current-window-clipboard
+bindsym $super+Shift+Print exec sway-easyshot current-window-file
+bindsym $ctrl+Print exec sway-easyshot toggle-record -a movie-current-window -w 2
+bindsym $ctrl+Shift+Print exec sway-easyshot stop-recording
 ```
 
 bindsym Print exec sway-easyshot toggle-record -a movie-current-window -w 5
